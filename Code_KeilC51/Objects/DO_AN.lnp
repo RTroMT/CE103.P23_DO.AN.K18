@@ -1,0 +1,3 @@
+".\Objects\main.obj" 
+TO ".\Objects\DO_AN" 
+PRINT(".\Listings\DO_AN.m51") RAMSIZE(256) 

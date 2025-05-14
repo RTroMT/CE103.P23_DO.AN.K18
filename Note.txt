@@ -1,0 +1,5 @@
+*** LƯU Ý ***
+- Khi chạy mô phỏng trong Proteus cần thay đổi địa chỉ file hex cho 8051:
++ Địa chỉ file HEX: DO_AN\Code_KeilC51\Objects\DO_AN.hex
+
+

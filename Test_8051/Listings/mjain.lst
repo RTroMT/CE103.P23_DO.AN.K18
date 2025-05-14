@@ -1,0 +1,69 @@
+C51 COMPILER V9.60.7.0   MJAIN                                                             05/08/2025 20:58:24 PAGE 1   
+
+
+C51 COMPILER V9.60.7.0, COMPILATION OF MODULE MJAIN
+OBJECT MODULE PLACED IN .\Objects\mjain.obj
+COMPILER INVOKED BY: C:\Keil_v5\C51\BIN\C51.EXE mjain.c OPTIMIZE(8,SPEED) BROWSE DEBUG OBJECTEXTEND PRINT(.\Listings\mja
+                    -in.lst) TABS(2) OBJECT(.\Objects\mjain.obj)
+
+line level    source
+
+   1          #include <REGX52.H>
+   2          #include <intrins.h>  // For _nop_()
+   3          
+   4          void Delay5us() {
+   5   1          _nop_();  // ~1 µs
+   6   1          _nop_();
+   7   1          _nop_();
+   8   1          _nop_();
+   9   1          _nop_();  // Approx 5 µs total
+  10   1      }
+  11          
+  12          void READ_ADC() {
+  13   1          P3_7 = 0;      // CS = 0
+  14   1          P3_6 = 1;      // RD = 1
+  15   1          P3_5 = 0;      // WR = 0
+  16   1          _nop_();   
+  17   1          _nop_(); 
+  18   1          _nop_();  // Small delay
+  19   1          P3_5 = 1;      // WR = 1
+  20   1          _nop_();
+  21   1          _nop_(); 
+  22   1          // Wait until INTR (P3.4) goes LOW
+  23   1          while (P3_4);
+  24   1      
+  25   1          P3_7 = 0;      // CS = 0
+  26   1          P3_6 = 0;      // RD = 0
+  27   1          _nop_();
+  28   1          _nop_(); 
+  29   1        
+  30   1        
+  31   1          P2 = P1;       // Read ADC value (P1) and output to P2
+  32   1      }
+  33          
+  34          void main() {
+  35   1          P1 = 0xFF;     // Set Port 1 as input (ADC data)
+  36   1          P2 = 0x00;     // Set Port 2 as output (display/output)
+  37   1          
+  38   1          while (1) {
+  39   2              READ_ADC();  // Continuously read ADC and output to P2
+  40   2            Delay5us();
+  41   2            Delay5us();
+  42   2          }
+  43   1      }
+
+
+MODULE INFORMATION:   STATIC OVERLAYABLE
+   CODE SIZE        =     49    ----
+   CONSTANT SIZE    =   ----    ----
+   XDATA SIZE       =   ----    ----
+   PDATA SIZE       =   ----    ----
+   DATA SIZE        =   ----    ----
+   IDATA SIZE       =   ----    ----
+   BIT SIZE         =   ----    ----
+END OF MODULE INFORMATION.
+
+C51 COMPILER V9.60.7.0   MJAIN                                                             05/08/2025 20:58:24 PAGE 2   
+
+
+C51 COMPILATION COMPLETE.  0 WARNING(S),  0 ERROR(S)

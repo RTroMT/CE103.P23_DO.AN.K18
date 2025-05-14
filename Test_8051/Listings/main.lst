@@ -1,0 +1,167 @@
+A51 MACRO ASSEMBLER  MAIN                                                                 05/09/2025 11:24:15 PAGE     1
+
+
+MACRO ASSEMBLER A51 V8.2.7.0
+OBJECT MODULE PLACED IN .\Objects\main.obj
+ASSEMBLER INVOKED BY: C:\Keil_v5\C51\BIN\A51.EXE main.a51 SET(SMALL) DEBUG PRINT(.\Listings\main.lst) OBJECT(.\Objects\m
+                      ain.obj) EP
+
+LOC  OBJ            LINE     SOURCE
+
+0000                   1     ORG 0000H
+                       2     
+0000 758160            3     MOV SP, #60H         ; Set stack pointer
+                       4     
+0003 111B              5     ACALL INIT_LCD       ; Initialize LCD
+                       6     
+                       7     ; Write "HELLO"
+0005 7448              8     MOV A, #'H'
+0007 1157              9     ACALL LCD_CHAR
+0009 7445             10     MOV A, #'E'
+000B 1157             11     ACALL LCD_CHAR
+000D 744C             12     MOV A, #'L'
+000F 1157             13     ACALL LCD_CHAR
+0011 744C             14     MOV A, #'L'
+0013 1157             15     ACALL LCD_CHAR
+0015 744F             16     MOV A, #'O'
+0017 1157             17     ACALL LCD_CHAR
+                      18     
+0019 80FE             19     HERE: SJMP HERE
+                      20     
+                      21     ;===================================
+                      22     ; Initialize LCD in 4-bit mode
+                      23     ;===================================
+001B                  24     INIT_LCD:
+001B 1189             25         ACALL DELAY_20MS
+                      26     
+001D 7403             27         MOV A, #03H         ; Wake-up sequence (x3)
+001F 1150             28         ACALL LCD_CMD_4BIT
+0021 1182             29         ACALL DELAY_5MS
+0023 1150             30         ACALL LCD_CMD_4BIT
+0025 1182             31         ACALL DELAY_5MS
+0027 1150             32         ACALL LCD_CMD_4BIT
+0029 1182             33         ACALL DELAY_5MS
+                      34     
+002B 7402             35         MOV A, #02H         ; Set 4-bit mode
+002D 1150             36         ACALL LCD_CMD_4BIT
+002F 7428             37         MOV A, #28H         ; 4-bit, 2-line, 5x8 font
+0031 1142             38         ACALL LCD_CMD
+0033 740C             39         MOV A, #0CH         ; Display ON, cursor OFF
+0035 1142             40         ACALL LCD_CMD
+0037 7401             41         MOV A, #01H         ; Clear display
+0039 1142             42         ACALL LCD_CMD
+003B 1182             43         ACALL DELAY_5MS
+003D 7406             44         MOV A, #06H         ; Entry mode
+003F 1142             45         ACALL LCD_CMD
+0041 22               46         RET
+                      47     
+                      48     ;===================================
+                      49     ; Write full command (split upper/lower nibbles)
+                      50     ;===================================
+0042                  51     LCD_CMD:
+0042 FD               52         MOV R5, A
+0043 C4               53         SWAP A
+0044 54F0             54         ANL A, #0F0H
+0046 1169             55         ACALL SEND_NIBBLE
+0048 ED               56         MOV A, R5
+0049 54F0             57         ANL A, #0F0H
+A51 MACRO ASSEMBLER  MAIN                                                                 05/09/2025 11:24:15 PAGE     2
+
+004B 1169             58         ACALL SEND_NIBBLE
+004D 1179             59         ACALL DELAY_2MS
+004F 22               60         RET
+                      61     
+                      62     ;===================================
+                      63     ; Write single upper nibble (used for wake-up)
+                      64     ;===================================
+0050                  65     LCD_CMD_4BIT:
+0050 54F0             66         ANL A, #0F0H
+0052 1169             67         ACALL SEND_NIBBLE
+0054 1179             68         ACALL DELAY_2MS
+0056 22               69         RET
+                      70     
+                      71     ;===================================
+                      72     ; Write character
+                      73     ;===================================
+0057                  74     LCD_CHAR:
+0057 D2A0             75         SETB P2.0         ; RS = 1
+0059 C2A1             76         CLR P2.1          ; RW = 0
+005B FD               77         MOV R5, A
+005C C4               78         SWAP A
+005D 54F0             79         ANL A, #0F0H
+005F 1169             80         ACALL SEND_NIBBLE
+0061 ED               81         MOV A, R5
+0062 54F0             82         ANL A, #0F0H
+0064 1169             83         ACALL SEND_NIBBLE
+0066 1179             84         ACALL DELAY_2MS
+0068 22               85         RET
+                      86     
+                      87     ;===================================
+                      88     ; Send upper nibble (to P2.4–P2.7)
+                      89     ;===================================
+0069                  90     SEND_NIBBLE:
+0069 C2A4             91         CLR P2.4
+006B C2A5             92         CLR P2.5
+006D C2A6             93         CLR P2.6
+006F C2A7             94         CLR P2.7
+0071 42A0             95         ORL P2, A          ; Output nibble on P2.4–P2.7
+0073 D2A2             96         SETB P2.2          ; EN = 1
+0075 00               97         NOP
+0076 C2A2             98         CLR P2.2           ; EN = 0
+0078 22               99         RET
+                     100     
+                     101     ;===================================
+                     102     ; Delay ~2ms
+                     103     ;===================================
+0079                 104     DELAY_2MS:
+0079 7FFA            105         MOV R7, #250
+007B 7EFA            106     DLY1: MOV R6, #250
+007D DEFE            107     DLY2: DJNZ R6, DLY2
+007F DFFA            108         DJNZ R7, DLY1
+0081 22              109         RET
+                     110     
+                     111     ; Delay ~5ms
+0082                 112     DELAY_5MS:
+0082 1179            113         ACALL DELAY_2MS
+0084 1179            114         ACALL DELAY_2MS
+0086 1179            115         ACALL DELAY_2MS
+0088 22              116         RET
+                     117     
+                     118     ; Delay ~20ms
+0089                 119     DELAY_20MS:
+0089 1182            120         ACALL DELAY_5MS
+008B 1182            121         ACALL DELAY_5MS
+008D 1182            122         ACALL DELAY_5MS
+008F 1182            123         ACALL DELAY_5MS
+A51 MACRO ASSEMBLER  MAIN                                                                 05/09/2025 11:24:15 PAGE     3
+
+0091 22              124         RET
+                     125     
+                     126     END
+A51 MACRO ASSEMBLER  MAIN                                                                 05/09/2025 11:24:15 PAGE     4
+
+SYMBOL TABLE LISTING
+------ ----- -------
+
+
+N A M E             T Y P E  V A L U E   ATTRIBUTES
+
+DELAY_20MS . . . .  C ADDR   0089H   A   
+DELAY_2MS. . . . .  C ADDR   0079H   A   
+DELAY_5MS. . . . .  C ADDR   0082H   A   
+DLY1 . . . . . . .  C ADDR   007BH   A   
+DLY2 . . . . . . .  C ADDR   007DH   A   
+HERE . . . . . . .  C ADDR   0019H   A   
+INIT_LCD . . . . .  C ADDR   001BH   A   
+LCD_CHAR . . . . .  C ADDR   0057H   A   
+LCD_CMD. . . . . .  C ADDR   0042H   A   
+LCD_CMD_4BIT . . .  C ADDR   0050H   A   
+P2 . . . . . . . .  D ADDR   00A0H   A   
+SEND_NIBBLE. . . .  C ADDR   0069H   A   
+SP . . . . . . . .  D ADDR   0081H   A   
+
+
+REGISTER BANK(S) USED: 0 
+
+
+ASSEMBLY COMPLETE.  0 WARNING(S), 0 ERROR(S)

@@ -1,0 +1,4 @@
+TRANSFER
+".\Objects\STARTUP.obj",
+".\Objects\mjain.obj" 
+TO ".\Objects\testAT89S52.LIB"

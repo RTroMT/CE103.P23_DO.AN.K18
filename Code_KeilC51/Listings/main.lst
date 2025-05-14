@@ -1,0 +1,408 @@
+A51 MACRO ASSEMBLER  MAIN                                                                 05/11/2025 13:03:24 PAGE     1
+
+
+MACRO ASSEMBLER A51 V8.2.7.0
+OBJECT MODULE PLACED IN .\Objects\main.obj
+ASSEMBLER INVOKED BY: C:\Keil_v5\C51\BIN\A51.EXE main.a51 SET(SMALL) DEBUG PRINT(.\Listings\main.lst) OBJECT(.\Objects\m
+                      ain.obj) EP
+
+LOC  OBJ            LINE     SOURCE
+
+0000                   1     ORG 0000H
+                       2             
+                       3     ;=========================================================
+                       4     ;   -REG_VAL-
+                       5     ;=========================================================
+0000 758160            6     MOV SP, #60H        ; Set up a safe stack pointer
+0003 758000            7     MOV P0, #00H        ; LCD output
+0006 7590FF            8     MOV P1, #0FFH       ; ADC input
+0009 75A000            9     MOV P2, #00H        ; LED output
+                      10     
+                      11     
+000C 75F000           12     MOV B,  #00H
+000F 7800             13     MOV R0, #00H        ; TEMP_VAL
+0011 7E00             14     MOV R6, #00H        ; Delay Reg
+0013 7F00             15     MOV R7, #00H        ; Delay Reg
+                      16     ;=========================================================
+                      17     ;   -DEFINES-
+                      18     ;=========================================================
+                      19     ;I2C Pins
+  00A0                20     RS  EQU P2.0
+  00A1                21     RW  EQU P2.1
+  00A2                22     EN  EQU P2.2
+                      23     
+  00A4                24     D4  EQU P2.4
+  00A5                25     D5  EQU P2.5
+  00A6                26     D6  EQU P2.6
+  00A7                27     D7  EQU P2.7
+                      28     ;=========================================================
+                      29     ;                           -MAIN-
+                      30     ;=========================================================
+0015                  31     MAIN:
+                      32             
+0015 1145             33         ACALL READ_AVG_ADC
+0017 E8               34         MOV A, R0
+0018 B53002           35         CJNE A, 30h, UPDATE_LCD
+001B 800C             36         SJMP SKIP_UPDATE
+                      37     
+001D                  38     UPDATE_LCD:
+001D F530             39         MOV 30h, A
+001F 1199             40         ACALL LCD_INIT         
+0021 11FC             41         ACALL DISPLAY_TEMP
+0023 E530             42         MOV A, 30h
+0025 11C8             43         ACALL DISPLAY_VALUE
+0027 3110             44         ACALL DISPLAY_doC
+                      45     
+0029                  46     SKIP_UPDATE:
+0029 3125             47         ACALL DELAY1MS
+002B 80E8             48         SJMP MAIN
+                      49             
+                      50     ;-------------------------
+                      51     ; -ADC0804-    
+                      52     ;-------------------------
+002D                  53     READ_ADC:
+002D C2B7             54         CLR P3.7        ; CS = 0
+002F D2B6             55         SETB P3.6       ; RD = 1   
+0031 C2B5             56         CLR P3.5        ; WR = 0
+0033 00               57         NOP
+A51 MACRO ASSEMBLER  MAIN                                                                 05/11/2025 13:03:24 PAGE     2
+
+0034 D2B5             58         SETB P3.5       ; WR = 1
+0036 00               59         NOP
+0037                  60     WAIT_INTR:
+0037 20B4FD           61         JB P3.4, WAIT_INTR  
+003A C2B7             62         CLR P3.7        ; CS = 0
+003C C2B6             63         CLR P3.6        ; RD = 0
+003E 3121             64         ACALL DELAY5US
+0040 A890             65         MOV R0, P1
+0042 88A0             66         MOV P2, R0
+0044 22               67         RET
+                      68             
+                      69     ; Hàm tính trung bình ADC_Value
+                      70     
+0045                  71     READ_AVG_ADC:
+0045 7D00             72         MOV R5, #00H        ; Low byte sum
+0047 7E00             73         MOV R6, #00H        ; High byte sum
+0049 7F04             74         MOV R7, #04H        ; Lay 4 sample 
+                      75     
+004B                  76     AVG_LOOP:
+004B 112D             77         ACALL READ_ADC      ; R0 chua gia tri ADC
+004D E8               78         MOV A, R0
+004E 2D               79         ADD A, R5           ; Cong low byte vao A
+004F FD               80         MOV R5, A
+0050 5001             81         JNC SKIP_INC_HI     ; If no carry, skip high byte increment
+0052 0E               82         INC R6              ; If carry, increment high byte
+                      83     
+0053                  84     SKIP_INC_HI:
+0053 3125             85         ACALL DELAY1MS
+0055 DFF4             86         DJNZ R7, AVG_LOOP
+                      87     
+                      88         ; Now divide 16-bit (R6:R5) by 4
+                      89         ; Perform 2 logical right shifts
+0057 EE               90         MOV A, R6           ; Shift high byte
+0058 13               91         RRC A
+0059 FE               92         MOV R6, A
+005A ED               93         MOV A, R5           ; Shift low byte with carry
+005B 13               94         RRC A
+005C FD               95         MOV R5, A
+                      96     
+005D EE               97         MOV A, R6           ; 2nd shift
+005E 13               98         RRC A
+005F FE               99         MOV R6, A
+0060 ED              100         MOV A, R5
+0061 13              101         RRC A
+0062 F8              102         MOV R0, A           ; Store final result in R0
+                     103     
+0063 22              104         RET
+                     105     ;------------------------
+                     106     ; -1602 Interface
+                     107     ;------------------------
+                     108     
+                     109     
+0064                 110     SEND_NIBBLE:
+                     111             ;; CHO A CHUA 4 BIT D4-D7
+                     112             ;; RESET CAC CHAN DATA
+0064 C2A4            113             CLR D4
+0066 C2A5            114             CLR D5
+0068 C2A6            115             CLR D6
+006A C2A7            116             CLR D7
+                     117             
+                     118             
+006C A2E4            119             MOV C, ACC.4
+006E 92A4            120             MOV D4, C
+0070 A2E5            121             MOV C, ACC.5
+0072 92A5            122             MOV D5, C
+0074 A2E6            123             MOV C, ACC.6
+A51 MACRO ASSEMBLER  MAIN                                                                 05/11/2025 13:03:24 PAGE     3
+
+0076 92A6            124             MOV D6, C
+0078 A2E7            125             MOV C, ACC.7
+007A 92A7            126             MOV D7, C
+                     127             
+                     128             ;EN 1->0
+007C D2A2            129             SETB EN
+007E 3125            130             ACALL DELAY1MS
+0080 C2A2            131             CLR EN
+0082 3125            132             ACALL DELAY1MS
+                     133             
+0084 22              134             RET
+                     135             
+0085                 136     SEND_CMD_LCD:
+0085 C2A0            137             CLR RS  ;RS=0 -> send cmd
+0087 C2A1            138             CLR RW  ;RW=0 -> write mode
+0089 1164            139         ACALL SEND_NIBBLE       ; Send upper nibble
+008B C4              140         SWAP A
+008C 1164            141         ACALL SEND_NIBBLE       ; Send lower nibble
+008E 22              142         RET 
+                     143     
+008F                 144     SEND_DATA_LCD:  
+008F D2A0            145         SETB RS     ; RS = 1 for data
+0091 C2A1            146         CLR RW      ; RW = 0 for write
+0093 1164            147         ACALL SEND_NIBBLE
+0095 C4              148         SWAP A
+0096 1164            149         ACALL SEND_NIBBLE
+0098 22              150         RET 
+                     151             
+0099                 152     LCD_INIT:
+0099 312C            153             ACALL DELAY20MS
+                     154             
+                     155             
+                     156         ; Optional “robust” entry sequence if you ever see weird behavior:
+009B 7403            157         MOV A,#03H  
+009D 1185            158             ACALL SEND_CMD_LCD
+009F 3121            159         ACALL DELAY5US
+                     160         
+00A1 7403            161             MOV A,#03H  
+00A3 1185            162             ACALL SEND_CMD_LCD
+00A5 3121            163         ACALL DELAY5US
+                     164             
+                     165             ; 4bit mode
+00A7 7402            166             MOV A, #02H
+00A9 1185            167             ACALL SEND_CMD_LCD
+                     168             ; Initialization of 16X2 LCD in 4bit mode
+00AB 7428            169             MOV A, #28H
+00AD 1185            170             ACALL SEND_CMD_LCD
+                     171             ; Display ON Cursor OFF
+00AF 740C            172             MOV A, #0CH
+00B1 1185            173             ACALL SEND_CMD_LCD
+                     174             ; Auto Increment cursor
+00B3 7406            175             MOV A, #06H
+00B5 1185            176             ACALL SEND_CMD_LCD
+                     177             ; Clear display
+00B7 7401            178             MOV A, #01H
+00B9 1185            179             ACALL SEND_CMD_LCD
+00BB 3125            180             ACALL DELAY1MS        ; ? wait for clear (˜1.5 ms)
+00BD 3125            181             ACALL DELAY1MS        ; ? wait for clear (˜1.5 ms)
+                     182             ; DRAM pos = 0
+00BF 7480            183             MOV A, #80H
+00C1 1185            184             ACALL SEND_CMD_LCD
+00C3 3125            185             ACALL DELAY1MS        ; ? wait for clear (˜1.5 ms)
+00C5 3125            186             ACALL DELAY1MS        ; ? wait for clear (˜1.5 ms)
+                     187             
+00C7 22              188             RET
+                     189             
+A51 MACRO ASSEMBLER  MAIN                                                                 05/11/2025 13:03:24 PAGE     4
+
+00C8                 190     DISPLAY_VALUE:
+                     191             ;Chuyen doi R0 thanh hang tram/chuc/donvi
+00C8 E8              192             MOV A, R0
+00C9 75F064          193             MOV B, #100
+                     194             
+00CC 84              195             DIV AB      ;A chua thuong, B chua so du
+00CD F9              196             MOV R1, A   ;hang tram
+                     197             
+00CE E5F0            198             MOV A, B    ;A chua so du
+00D0 75F00A          199             MOV B, #10
+00D3 84              200             DIV AB
+00D4 FA              201             MOV R2, A   ;hang chuc
+                     202             
+00D5 ABF0            203             MOV R3, B   ;hang don vi
+                     204             
+                     205             
+                     206         ; Bo qua so 0 o hang tram
+00D7 E9              207         MOV A, R1
+00D8 6004            208         JZ SKIP_HUNDREDS   ; neu R1 == 0, nhay toi in hang chuc
+00DA 2430            209         ADD A, #30H        ; Chuyen doi sang ASCII (+ 0x30 offset)
+00DC 118F            210         ACALL SEND_DATA_LCD 
+                     211             
+00DE                 212     SKIP_HUNDREDS:
+00DE E9              213         MOV A, R1
+00DF 7003            214         JNZ PRINT_TENS     ; In hang chuc, mac dinh sau khi in hang tram
+                     215         
+                     216             ;Bo qua so 0 o hang chuc
+00E1 EA              217         MOV A, R2
+00E2 6005            218         JZ SKIP_TENS       ; Neu R2 == 0 va R1 == 0, nhay toi SKIP_TENS     
+                     219     ; In hang chuc, mac dinh sau khi in hang tram (JNZ PRINT_TENS)
+00E4                 220     PRINT_TENS:
+00E4 EA              221         MOV A, R2
+00E5 2430            222         ADD A, #30H
+00E7 118F            223         ACALL SEND_DATA_LCD
+                     224     
+00E9                 225     SKIP_TENS:
+00E9 E9              226         MOV A, R1
+00EA 4A              227         ORL A, R2          ; R1 va R2 deu bang 0 thi in don vi
+00EB 7003            228         JNZ PRINT_ONES     ; 
+                     229     
+00ED EB              230         MOV A, R3
+00EE 6007            231         JZ PRINT_ZERO      ; In 0 neu VAL(R0) = 000
+00F0                 232     PRINT_ONES:
+00F0 EB              233         MOV A, R3
+00F1 2430            234         ADD A, #30H
+00F3 118F            235         ACALL SEND_DATA_LCD
+00F5 8004            236         SJMP END_PRINT
+                     237     
+00F7                 238     PRINT_ZERO:
+00F7 7430            239         MOV A, #'0'
+00F9 118F            240         ACALL SEND_DATA_LCD
+                     241     
+00FB                 242     END_PRINT:
+00FB 22              243             RET
+                     244             
+                     245             
+00FC                 246     DISPLAY_TEMP:
+00FC 900109          247         MOV DPTR, #MSG
+00FF                 248     NEXT_CHAR:
+00FF E4              249         CLR A 
+0100 93              250         MOVC A, @A+DPTR          ;read 1 byte tai DPTR + A(offset, default A=0) 
+                     251                                      ;dung A tai day de dung format MOVC
+0101 6005            252         JZ END_MSG               ;jump neu gap null 0x00
+0103 118F            253         ACALL SEND_DATA_LCD
+0105 A3              254         INC DPTR                 ;tang DPTR de doc byte tiep theo
+0106 80F7            255         SJMP NEXT_CHAR
+A51 MACRO ASSEMBLER  MAIN                                                                 05/11/2025 13:03:24 PAGE     5
+
+0108                 256     END_MSG:
+0108 22              257         RET
+                     258     
+0109 54454D50        259     MSG: DB 'TEMP: ', 0 ;CHO MSG thanh chuoi cac 8bit và add nullptr 0x00 o cuoi
+010D 3A2000                  
+                     260                             ;MSG se chua dia chi cua string
+                     261     
+0110                 262     DISPLAY_doC:
+0110 90011D          263         MOV DPTR, #MSG_doC
+0113                 264     NEXT_CHAR_doC:
+0113 E4              265         CLR A 
+0114 93              266         MOVC A, @A+DPTR          ;read 1 byte tai DPTR + A(offset, default A=0) 
+                     267                                      ;dung A tai day de dung format MOVC
+0115 6005            268         JZ END_MSG_doC           ;jump neu gap null 0x00
+0117 118F            269         ACALL SEND_DATA_LCD
+0119 A3              270         INC DPTR                 ;tang DPTR de doc byte tiep theo
+011A 80F7            271         SJMP NEXT_CHAR_doC
+011C                 272     END_MSG_doC:
+011C 22              273         RET
+                     274     
+011D 206F4300        275     MSG_doC: DB ' oC', 0 ;CHO MSG thanh chuoi cac 8bit và add nullptr 0x00 o cuoi
+                     276     
+                     277             
+                     278     ;-------------------------
+                     279     ; -ULT FUNC-    
+                     280     ;-------------------------    
+0121                 281     DELAY5US:
+0121 00              282         NOP    ; 1 µs
+0122 00              283         NOP    ; 1 µs
+0123 00              284         NOP    ; 1 µs    
+0124 22              285         RET    ; 2 µs    
+                     286         
+0125                 287     DELAY1MS:
+0125 7EC8            288         MOV R6, #200        
+0127                 289     D1MS_LOOP:
+0127 3121            290         ACALL DELAY5US
+0129 DEFC            291         DJNZ R6, D1MS_LOOP
+012B 22              292         RET
+                     293             
+012C                 294     DELAY20MS:
+012C 7F14            295         MOV R7, #20
+012E                 296     D20MS_LOOP:
+012E 3125            297         ACALL DELAY1MS
+0130 DFFC            298         DJNZ R7, D20MS_LOOP
+0132 22              299         RET 
+                     300             
+                     301             
+0133 7DFA            302     DELAY1S: MOV R5, #250D
+0135                 303     LABEL:
+0135 3140            304             ACALL DELAY
+0137 3140            305             ACALL DELAY
+0139 3140            306             ACALL DELAY
+013B 3140            307             ACALL DELAY
+013D DDF6            308             DJNZ R5, LABEL
+013F 22              309             RET
+                     310             
+0140                 311     DELAY:
+0140 7EFA            312             MOV R6, #250D
+0142 7FFA            313             MOV R7, #250D
+                     314             
+0144                 315             LOOP1:
+0144 DEFE            316             DJNZ R6, LOOP1
+0146                 317             LOOP2:
+0146 DFFE            318             DJNZ R7, LOOP2
+                     319             
+0148 22              320             RET
+A51 MACRO ASSEMBLER  MAIN                                                                 05/11/2025 13:03:24 PAGE     6
+
+                     321             
+                     322     END     
+A51 MACRO ASSEMBLER  MAIN                                                                 05/11/2025 13:03:24 PAGE     7
+
+SYMBOL TABLE LISTING
+------ ----- -------
+
+
+N A M E             T Y P E  V A L U E   ATTRIBUTES
+
+ACC. . . . . . . .  D ADDR   00E0H   A   
+AVG_LOOP . . . . .  C ADDR   004BH   A   
+B. . . . . . . . .  D ADDR   00F0H   A   
+D1MS_LOOP. . . . .  C ADDR   0127H   A   
+D20MS_LOOP . . . .  C ADDR   012EH   A   
+D4 . . . . . . . .  B ADDR   00A0H.4 A   
+D5 . . . . . . . .  B ADDR   00A0H.5 A   
+D6 . . . . . . . .  B ADDR   00A0H.6 A   
+D7 . . . . . . . .  B ADDR   00A0H.7 A   
+DELAY. . . . . . .  C ADDR   0140H   A   
+DELAY1MS . . . . .  C ADDR   0125H   A   
+DELAY1S. . . . . .  C ADDR   0133H   A   
+DELAY20MS. . . . .  C ADDR   012CH   A   
+DELAY5US . . . . .  C ADDR   0121H   A   
+DISPLAY_DOC. . . .  C ADDR   0110H   A   
+DISPLAY_TEMP . . .  C ADDR   00FCH   A   
+DISPLAY_VALUE. . .  C ADDR   00C8H   A   
+EN . . . . . . . .  B ADDR   00A0H.2 A   
+END_MSG. . . . . .  C ADDR   0108H   A   
+END_MSG_DOC. . . .  C ADDR   011CH   A   
+END_PRINT. . . . .  C ADDR   00FBH   A   
+LABEL. . . . . . .  C ADDR   0135H   A   
+LCD_INIT . . . . .  C ADDR   0099H   A   
+LOOP1. . . . . . .  C ADDR   0144H   A   
+LOOP2. . . . . . .  C ADDR   0146H   A   
+MAIN . . . . . . .  C ADDR   0015H   A   
+MSG. . . . . . . .  C ADDR   0109H   A   
+MSG_DOC. . . . . .  C ADDR   011DH   A   
+NEXT_CHAR. . . . .  C ADDR   00FFH   A   
+NEXT_CHAR_DOC. . .  C ADDR   0113H   A   
+P0 . . . . . . . .  D ADDR   0080H   A   
+P1 . . . . . . . .  D ADDR   0090H   A   
+P2 . . . . . . . .  D ADDR   00A0H   A   
+P3 . . . . . . . .  D ADDR   00B0H   A   
+PRINT_ONES . . . .  C ADDR   00F0H   A   
+PRINT_TENS . . . .  C ADDR   00E4H   A   
+PRINT_ZERO . . . .  C ADDR   00F7H   A   
+READ_ADC . . . . .  C ADDR   002DH   A   
+READ_AVG_ADC . . .  C ADDR   0045H   A   
+RS . . . . . . . .  B ADDR   00A0H.0 A   
+RW . . . . . . . .  B ADDR   00A0H.1 A   
+SEND_CMD_LCD . . .  C ADDR   0085H   A   
+SEND_DATA_LCD. . .  C ADDR   008FH   A   
+SEND_NIBBLE. . . .  C ADDR   0064H   A   
+SKIP_HUNDREDS. . .  C ADDR   00DEH   A   
+SKIP_INC_HI. . . .  C ADDR   0053H   A   
+SKIP_TENS. . . . .  C ADDR   00E9H   A   
+SKIP_UPDATE. . . .  C ADDR   0029H   A   
+SP . . . . . . . .  D ADDR   0081H   A   
+UPDATE_LCD . . . .  C ADDR   001DH   A   
+WAIT_INTR. . . . .  C ADDR   0037H   A   
+
+
+REGISTER BANK(S) USED: 0 
+
+
+ASSEMBLY COMPLETE.  0 WARNING(S), 0 ERROR(S)

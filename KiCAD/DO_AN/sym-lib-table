@@ -1,0 +1,4 @@
+(sym_lib_table
+  (version 7)
+  (lib (name "ADC0804")(type "KiCad")(uri "${KIPRJMOD}/LIB/IC_DIP.pretty/ADC0804.kicad_sym")(options "")(descr ""))
+)
