@@ -63,10 +63,9 @@ WAIT_INTR:
     CLR P3.6        ; RD = 0
     ACALL DELAY5US
     MOV R0, P1
-    MOV P2, R0
     RET
 	
-; Hàm tính trung bình ADC_Value
+; H m t nh trung b nh ADC_Value
 
 READ_AVG_ADC:
     MOV R5, #00H        ; Low byte sum
@@ -76,7 +75,7 @@ READ_AVG_ADC:
 AVG_LOOP:
     ACALL READ_ADC      ; R0 chua gia tri ADC
     MOV A, R0
-    ADD A, R5           ; Cong low byte vao A = A + R5 (neu tran A thì C = 1)
+    ADD A, R5           ; Cong low byte vao A = A + R5 (neu tran A th  C = 1)
     MOV R5, A           ; Dua 8bit LSB ve R5
     JNC SKIP_INC_HI     ; C = 0 thi tiep tuc lay mau
     INC R6              ; C = 1 thi tang R6 = R6 + 1
@@ -152,7 +151,7 @@ LCD_INIT:
 	ACALL DELAY20MS
 	
 	
-    ; Optional “robust” entry sequence if you ever see weird behaviors
+    ; Optional  robust  entry sequence if you ever see weird behaviors
     MOV A,#03H  
 	ACALL SEND_CMD_LCD
     ACALL DELAY5US
@@ -176,13 +175,13 @@ LCD_INIT:
 	; Clear display
 	MOV A, #01H
 	ACALL SEND_CMD_LCD
-	ACALL DELAY1MS        ; ? wait for clear (˜1.5 ms)
-	ACALL DELAY1MS        ; ? wait for clear (˜1.5 ms)
+	ACALL DELAY1MS        ; ? wait for clear ( 1.5 ms)
+	ACALL DELAY1MS        ; ? wait for clear ( 1.5 ms)
 	; DRAM pos = 0
 	MOV A, #80H
 	ACALL SEND_CMD_LCD
-	ACALL DELAY1MS        ; ? wait for clear (˜1.5 ms)
-	ACALL DELAY1MS        ; ? wait for clear (˜1.5 ms)
+	ACALL DELAY1MS        ; ? wait for clear ( 1.5 ms)
+	ACALL DELAY1MS        ; ? wait for clear ( 1.5 ms)
 	
 	RET
 	
@@ -255,7 +254,7 @@ NEXT_CHAR:
 END_MSG:
     RET
 
-MSG: DB 'TEMP: ', 0 ;CHO MSG thanh chuoi cac 8bit và add nullptr 0x00 o cuoi
+MSG: DB 'TEMP: ', 0 ;CHO MSG thanh chuoi cac 8bit v  add nullptr 0x00 o cuoi
 	                ;MSG se chua dia chi cua string
 
 DISPLAY_doC:
@@ -271,51 +270,37 @@ NEXT_CHAR_doC:
 END_MSG_doC:
     RET
 
-MSG_doC: DB ' oC', 0 ;CHO MSG thanh chuoi cac 8bit và add nullptr 0x00 o cuoi
+MSG_doC: DB ' oC', 0 ;CHO MSG thanh chuoi cac 8bit v  add nullptr 0x00 o cuoi
 
 	
 ;-------------------------
-; -ULT FUNC-    
+; -ULT FUNC (dùng Timer0)-    
 ;-------------------------    
+
+
 DELAY5US:
-    NOP    ; 1 µs
-    NOP    ; 1 µs
-    NOP    ; 1 µs    
-    RET    ; 2 µs    
-    
+    NOP
+	NOP
+	NOP
+	RET
+
 DELAY1MS:
-    MOV R6, #200        
-D1MS_LOOP:
-    ACALL DELAY5US
-    DJNZ R6, D1MS_LOOP
+    MOV TMOD, #01H
+    MOV TH0, #0FCH
+    MOV TL0, #018H
+    SETB TR0
+
+WAIT_T0_1MS:
+    JNB TF0, WAIT_T0_1MS
+    CLR TR0
+    CLR TF0
     RET
-	
+
 DELAY20MS:
     MOV R7, #20
 D20MS_LOOP:
     ACALL DELAY1MS
     DJNZ R7, D20MS_LOOP
-    RET	
-	
-	
-DELAY1S: MOV R5, #250D
-LABEL:
-	ACALL DELAY
-	ACALL DELAY
-	ACALL DELAY
-	ACALL DELAY
-	DJNZ R5, LABEL
-	RET
-	
-DELAY:
-	MOV R6, #250D
-	MOV R7, #250D
-	
-	LOOP1:
-	DJNZ R6, LOOP1
-	LOOP2:
-	DJNZ R7, LOOP2
-	
-	RET
-	
+    RET
+
 END	
